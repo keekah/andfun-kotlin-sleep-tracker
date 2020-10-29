@@ -22,7 +22,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.example.android.trackmysleepquality.R
+import com.example.android.trackmysleepquality.database.SleepDatabase
 import com.example.android.trackmysleepquality.databinding.FragmentSleepTrackerBinding
 
 /**
@@ -43,6 +47,33 @@ class SleepTrackerFragment : Fragment() {
         // Get a reference to the binding object and inflate the fragment views.
         val binding: FragmentSleepTrackerBinding = DataBindingUtil.inflate(
                 inflater, R.layout.fragment_sleep_tracker, container, false)
+
+
+        // Get a reference to the application context
+        val application = requireNotNull(this.activity).application
+        // Get a reference to the DAO
+        val dataSource = SleepDatabase.getInstance(application).sleepDatabaseDao
+
+        // Using the references obtained above, create a SleepTrackerViewModelFactory
+        // and then use it to get an instance of the SleepTrackerViewModel
+        val viewModelFactory = SleepTrackerViewModelFactory(dataSource, application)
+        val sleepTrackerViewModel =
+                ViewModelProvider(this, viewModelFactory)
+                        .get(SleepTrackerViewModel::class.java)
+
+        // Allow data binding to observe LiveData updates
+        binding.lifecycleOwner = this
+        // Assign the viewModel variable in our layout to our sleepTrackerViewModel instance
+        binding.sleepTrackerViewModel = sleepTrackerViewModel
+
+        sleepTrackerViewModel.eventNavigateToSleepQuality.observe(viewLifecycleOwner, Observer {night ->
+            night?.let {
+                this.findNavController().navigate(
+                        SleepTrackerFragmentDirections
+                                .actionSleepTrackerFragmentToSleepQualityFragment(night.nightId))
+                sleepTrackerViewModel.onNavigationComplete()
+            }
+        })
 
         return binding.root
     }
